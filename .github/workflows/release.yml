@@ -1,0 +1,108 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-tui:
+    name: build TUI (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-x64
+            bin: rune-linux-x64
+            src: tui/target/release/rune-tui
+          - os: macos-latest
+            target: darwin-arm64
+            bin: rune-darwin-arm64
+            src: tui/target/release/rune-tui
+          - os: macos-13
+            target: darwin-x64
+            bin: rune-darwin-x64
+            src: tui/target/release/rune-tui
+          - os: windows-latest
+            target: win32-x64
+            bin: rune-win32-x64.exe
+            src: tui/target/release/rune-tui.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tui
+
+      - name: cargo build --release
+        run: cargo build --release --manifest-path tui/Cargo.toml
+
+      - name: Strip Unix binary
+        if: runner.os != 'Windows'
+        run: strip ${{ matrix.src }}
+
+      - name: Stage renamed binary
+        shell: bash
+        run: |
+          mkdir -p artifact
+          cp "${{ matrix.src }}" "artifact/${{ matrix.bin }}"
+          ls -la artifact
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.bin }}
+          path: artifact/${{ matrix.bin }}
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: publish to npm
+    needs: build-tui
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Download all binary artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Assemble rune-pkg/bin
+        run: |
+          mkdir -p rune-pkg/bin
+          # Each artifact lands in artifacts/<name>/<name>; flatten into bin/.
+          find artifacts -type f -name 'rune-*' -exec cp {} rune-pkg/bin/ \;
+          chmod +x rune-pkg/bin/rune-linux-x64 \
+                   rune-pkg/bin/rune-darwin-arm64 \
+                   rune-pkg/bin/rune-darwin-x64 || true
+          ls -la rune-pkg/bin
+
+      - name: Assemble rune-pkg/daemon
+        run: |
+          mkdir -p rune-pkg/daemon
+          cp daemon/server.js rune-pkg/daemon/
+
+      - name: npm install (rune-pkg)
+        working-directory: rune-pkg
+        run: npm install --ignore-scripts
+
+      - name: npm publish
+        working-directory: rune-pkg
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public

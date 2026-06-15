@@ -1,0 +1,14 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Rust
+tui/target/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# NPM Pack artifacts
+rune-pkg/bin/
+*.tgz

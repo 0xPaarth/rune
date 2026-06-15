@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "CP Ingestion Bridge",
+  "version": "0.1.0",
+  "description": "Scrapes Codeforces problems and sends them to a local workspace daemon.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": [
+    "*://codeforces.com/problemset/problem/*",
+    "*://codeforces.com/contest/*/problem/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Ingest Codeforces Problem"
+  },
+  "options_page": "options.html"
+}
