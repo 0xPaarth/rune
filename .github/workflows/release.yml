@@ -20,7 +20,6 @@ jobs:
             target: darwin-arm64
             bin: rune-darwin-arm64
             src: tui/target/release/rune-tui
-          # macos-13 (Intel) removed to bypass CI runner queue/limits
           - os: windows-latest
             target: win32-x64
             bin: rune-win32-x64.exe
@@ -79,19 +78,26 @@ jobs:
         with:
           path: artifacts
 
-      - name: Assemble rune-pkg/bin
+      - name: Assemble rune-pkg
         run: |
+          # 1. Create bin folder inside the existing rune-pkg directory
           mkdir -p rune-pkg/bin
-          # Each artifact lands in artifacts/<name>/<name>; flatten into bin/.
+          
+          # 2. Copy compiled binaries into bin/
           find artifacts -type f -name 'rune-*' -exec cp {} rune-pkg/bin/ \;
           chmod +x rune-pkg/bin/rune-linux-x64 \
                    rune-pkg/bin/rune-darwin-arm64 || true
-          ls -la rune-pkg/bin
-
-      - name: Assemble rune-pkg/daemon
-        run: |
+          
+          # 3. Create daemon folder and copy server.js
           mkdir -p rune-pkg/daemon
           cp daemon/server.js rune-pkg/daemon/
+          
+          # 4. Verify package.json exists!
+          echo "Contents of rune-pkg:"
+          ls -la rune-pkg/
+          echo "Contents of rune-pkg/bin:"
+          ls -la rune-pkg/bin/
+          cat rune-pkg/package.json
 
       - name: npm install (rune-pkg)
         working-directory: rune-pkg
