@@ -43,6 +43,10 @@ jobs:
 
       - name: cargo build --release
         run: cargo build --release --manifest-path tui/Cargo.toml
+        env:
+          # Prevents OOM (Out of Memory) crashes on macOS Intel runners 
+          # by limiting cargo to compile one crate at a time
+          CARGO_BUILD_JOBS: 1
 
       - name: Strip Unix binary
         if: runner.os != 'Windows'
