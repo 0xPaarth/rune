@@ -20,10 +20,7 @@ jobs:
             target: darwin-arm64
             bin: rune-darwin-arm64
             src: tui/target/release/rune-tui
-          - os: macos-13
-            target: darwin-x64
-            bin: rune-darwin-x64
-            src: tui/target/release/rune-tui
+          # macos-13 (Intel) removed to bypass CI runner queue/limits
           - os: windows-latest
             target: win32-x64
             bin: rune-win32-x64.exe
@@ -43,10 +40,6 @@ jobs:
 
       - name: cargo build --release
         run: cargo build --release --manifest-path tui/Cargo.toml
-        env:
-          # Prevents OOM (Out of Memory) crashes on macOS Intel runners 
-          # by limiting cargo to compile one crate at a time
-          CARGO_BUILD_JOBS: 1
 
       - name: Strip Unix binary
         if: runner.os != 'Windows'
@@ -92,8 +85,7 @@ jobs:
           # Each artifact lands in artifacts/<name>/<name>; flatten into bin/.
           find artifacts -type f -name 'rune-*' -exec cp {} rune-pkg/bin/ \;
           chmod +x rune-pkg/bin/rune-linux-x64 \
-                   rune-pkg/bin/rune-darwin-arm64 \
-                   rune-pkg/bin/rune-darwin-x64 || true
+                   rune-pkg/bin/rune-darwin-arm64 || true
           ls -la rune-pkg/bin
 
       - name: Assemble rune-pkg/daemon
